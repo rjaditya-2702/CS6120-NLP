@@ -7,6 +7,7 @@ import pandas as pd
 from transformers import pipeline
 from transformers import GPT2Tokenizer
 from transformers import GPT2ForSequenceClassification, GPT2Config
+import os
 
 sm = nn.Softmax()
 
@@ -61,7 +62,7 @@ if __name__ == '__main__':
     model = GPT2ForSequenceClassification.from_pretrained("./model")
     tokenizer.pad_token = tokenizer.eos_token
 
-    ## get examples per class:
+    # ## get examples per class:
 
     # text = """
     # I am happy becuase of this movie. The joy i experience is insurmountable.
@@ -81,4 +82,22 @@ if __name__ == '__main__':
     diff_probs = main(text, tokenizer, model)
     print(diff_probs)
 
-    ## comparison:
+    # ## comparison:
+    samples_folder = 'samples'
+    sample_files = [f for f in os.listdir(samples_folder) if os.path.isfile(os.path.join(samples_folder, f))]
+
+    for sample_file in sample_files:
+        with open(os.path.join(samples_folder, sample_file), 'r') as file:
+            text = file.read()
+            print(f"Processing file: {sample_file}")
+            
+            # Baseline result
+            inputs = tokenizer(text, return_tensors='pt')
+            with torch.no_grad():
+                logits = model(**inputs).logits
+            probs = sm(logits).tolist()
+            print(f"Baseline probabilities for {sample_file}: {probs}")
+            
+            # Get the probabilities for each variation
+            diff_probs = main(text, tokenizer, model)
+            print(f"Variation probabilities for {sample_file}: {diff_probs}")
