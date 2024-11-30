@@ -62,6 +62,16 @@ def get_one_head_masked_models(main_model):
         variation_list.append(apply_mask(main_model, attention_head_name))
     return variation_list
 
+class CustomDataset(Dataset):
+    def __init__(self, texts):
+        self.texts = texts
+
+    def __len__(self):
+        return len(self.texts)
+
+    def __getitem__(self, idx):
+        return self.texts[idx]
+
 def main(text, tokenizer, variation_list):
 
     ## collect prob vectors
@@ -71,7 +81,7 @@ def main(text, tokenizer, variation_list):
         with torch.no_grad():
             logits = model(**inputs).logits
         softmax_probs = sm(logits)
-        print(softmax_probs)
+        # print(softmax_probs)
         output_dict[i] = softmax_probs
     return output_dict
 
@@ -81,7 +91,7 @@ def pass_text_to_model(inputs, model):
     with torch.no_grad():
         logits = model(**inputs).logits
     softmax_probs = sm(logits)
-    print(softmax_probs)
+    # print(softmax_probs)
     return softmax_probs
 
 def head_masking(text, tokenizer, variation_list, ):
@@ -94,49 +104,51 @@ if __name__ == '__main__':
 
     ## trained model:
     tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-    main_model = GPT2ForSequenceClassification.from_pretrained("./model")
+    main_model = GPT2ForSequenceClassification.from_pretrained("/Users/neetidesai/Desktop/CS6120-NLP/code/model")
     tokenizer.pad_token = tokenizer.eos_token
 
     ## get variations
     variation_list = get_one_head_masked_models(main_model=main_model)
+    samples_folder = '/Users/neetidesai/Desktop/CS6120-NLP/code/samples'
+    sample_files = [f for f in os.listdir(f"{samples_folder}")]
 
-    samples_folder = '/Users/rjaditya/Documents/NEU-SEM/Fall-2024/NLP/project/CS6120-NLP/code/samples'
-    sample_files = [f for f in os.listdir(samples_folder) if os.path.isfile(os.path.join(samples_folder, f))]
-
-    exec_path_list = os.path.abspath(__file__).split('/')
-    path = ''
-    for i in exec_path_list:
-        if i == 'code':
-            break
-        path += i + '/'
-    path += 'output_logs/'
+    # exec_path_list = os.path.abspath(__file__).split('/')
+    # path = ''
+    # for i in exec_path_list:
+    #     if i == 'code':
+    #         break
+    #     path += i + '/'
+    path = 'output_logs'
     if not os.path.exists(path):
         os.mkdir(path)
+                
     for v_i, model in enumerate(variation_list):
         message = ""
+        print("\n---------------------------------\n")
+        print(f"Processing variation #{v_i}")
         for sample_file in sample_files:
-            if True:
-                print(f"Processing file: {sample_file}")
-                df = pd.read_csv(os.path.join(samples_folder, sample_file))
-                labels = df['labels'].values().tolist()
-                text = df['text']
-                dataset = Dataset(text.values())
-                data_loader = DataLoader(dataset) # [batch, <>]
-                
-                inputs = tokenizer(data_loader, return_tensors='pt') #[batch, d_model]
+
+            print(f"Processing file: {sample_file}")
+            df = pd.read_csv(os.path.join(samples_folder, sample_file))
+
+            labels = df['label'].values.tolist()
+            texts = df['text'].tolist()
+
+            for text, label in zip(texts, labels):
+                inputs = tokenizer(text, return_tensors='pt')
                 
                 # Baseline result
                 with torch.no_grad():
-                    logits = main_model(**inputs).logits # [batch, 6]
-                probs = sm(logits).tolist() # [batch, 6]
-                class_ = [mapping[i] for i in labels]
-                message += f"Baseline probabilities for {sample_file}: {probs} \n\n"
+                    logits = main_model(**inputs).logits
+                probs = sm(logits).tolist()
+                class_ = mapping[label]
+                message += f"Baseline probabilities for {sample_file} - {text}: {probs} \n\n"
                 
                 # Get the probabilities for one variation
-                diff_probs = pass_text_to_model(inputs, model) # [batch, 6]
-                message += f"Variation probabilities for variation #{v_i}: {diff_probs}\n"
+                diff_probs = pass_text_to_model(inputs, model)
+                message += f"Variation probabilities for variation #{v_i} - {text}: {diff_probs}\n"
         message += "\n---------------------------------\n"
-        with open(f"{path}dummy.txt", 'w') as text_file:
+        with open(f"{path}/results.txt", 'w') as text_file:
             text_file.write(message)
 
 
