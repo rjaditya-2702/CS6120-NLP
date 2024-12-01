@@ -72,19 +72,6 @@ class CustomDataset(Dataset):
     def __getitem__(self, idx):
         return self.texts[idx]
 
-def main(text, tokenizer, variation_list):
-
-    ## collect prob vectors
-    output_dict = {}
-    for i, model in enumerate(variation_list):
-        inputs = tokenizer(text, return_tensors = 'pt')
-        with torch.no_grad():
-            logits = model(**inputs).logits
-        softmax_probs = sm(logits)
-        # print(softmax_probs)
-        output_dict[i] = softmax_probs
-    return output_dict
-
 def pass_text_to_model(inputs, model):
 
     ## collect prob vectors
@@ -100,19 +87,22 @@ def head_masking(text, tokenizer, variation_list, ):
         probs = pass_text_to_model(inputs, model)
     return probs
 
-if __name__ == '__main__':
+def head_masking_inference(tokenizer, main_model, variation_list, path):
 
-    # trained model:
-    tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-    main_model = GPT2ForSequenceClassification.from_pretrained("./code/model")
-    tokenizer.pad_token = tokenizer.eos_token
-
-    # get variations
-    variation_list = get_one_head_masked_models(main_model=main_model)
+    d = {
+        "Text": [],
+        'True':[],
+        'mask':[],
+        '0':[],
+        '1':[],
+        '2':[],
+        '3':[],
+        '4':[],
+        '5':[]
+    }
     samples_folder = './code/samples'
     sample_files = [f for f in os.listdir(f"{samples_folder}")]
 
-    path = 'output_logs'
     if not os.path.exists(path):
         os.mkdir(path)
                 
@@ -123,9 +113,9 @@ if __name__ == '__main__':
         print("\n---------------------------------\n")
         print(f"Processing variation #{v_i}")
         for sample_file in sample_files:
-            message = f"{sample_file} \n\n"
-            with open(f"{path}/results.txt", 'a') as text_file:
-                text_file.write(message)
+            # message = f"{sample_file} \n\n"
+            # with open(f"{path}/results.txt", 'a') as text_file:
+            #     text_file.write(message)
             
             print(f"Processing file: {sample_file}")
             df = pd.read_csv(os.path.join(samples_folder, sample_file))
@@ -134,31 +124,51 @@ if __name__ == '__main__':
             texts = df['text'].tolist()
 
             for text, label in zip(texts, labels):
-                message = f"{text}\n"
-                
-                with open(f"{path}/results.txt", 'a') as text_file:
-                    text_file.write(message)
+                # message = f"{text}\n"
+                # with open(f"{path}/results.txt", 'a') as text_file:
+                #     text_file.write(message)
+                d['Text'].append(text)
+                d['True'].append(label)
                 inputs = tokenizer(text, return_tensors='pt')
                 
                 # Baseline result
                 with torch.no_grad():
                     logits = main_model(**inputs).logits
-                probs = sm(logits).tolist()
+                probs = sm(logits).tolist()[0]
+                d['mask'].append(-1)
+                d['0'].append(probs[0])
+                d['1'].append(probs[0])
+                d['2'].append(probs[0])
+                d['3'].append(probs[0])
+                d['4'].append(probs[0])
+                d['5'].append(probs[0])
+
                 class_ = mapping[int(label[-1])]
 
-                message = f"Baseline probabilities: {probs}\n"
-                with open(f"{path}/results.txt", 'a') as text_file:
-                    text_file.write(message)
+                # message = f"Baseline probabilities: {probs}\n"
+                # with open(f"{path}/results.txt", 'a') as text_file:
+                #     text_file.write(message)
                 
                 # Get the probabilities for one variation
-                diff_probs = pass_text_to_model(inputs, model)
-                message = f"variant: {diff_probs}\n\n"
-                with open(f"{path}/results.txt", 'a') as text_file:
-                    text_file.write(message)
-        message = "\n---------------------------------\n"
-        with open(f"{path}/results.txt", 'a') as text_file:
-            text_file.write(message)
-       
+                diff_probs = pass_text_to_model(inputs, model).tolist()[0]
+                d['Text'].append(text)
+                d['True'].append(label)
+                d['mask'].append(v_i)
+                d['0'].append(diff_probs[0])
+                d['1'].append(diff_probs[0])
+                d['2'].append(diff_probs[0])
+                d['3'].append(diff_probs[0])
+                d['4'].append(diff_probs[0])
+                d['5'].append(diff_probs[0])
+                # message = f"variant: {diff_probs}\n\n"
+                # with open(f"{path}/results.txt", 'a') as text_file:
+                #     text_file.write(message)
+        # message = "\n---------------------------------\n"
+        # with open(f"{path}/results.txt", 'a') as text_file:
+        #     text_file.write(message)
+    
+    df = pd.DataFrame(d)
+    return df
 
 
     '''
@@ -183,3 +193,19 @@ if __name__ == '__main__':
     # diff_probs = main(text, tokenizer, variation_list)
     # print(diff_probs)
     '''
+
+if __name__ == "__main__":
+    # trained model:
+    tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+    main_model = GPT2ForSequenceClassification.from_pretrained("./code/model")
+    tokenizer.pad_token = tokenizer.eos_token
+
+    # get variations
+    variation_list = get_one_head_masked_models(main_model=main_model)
+    
+    path = 'output_logs'
+
+    df_head_masking = head_masking_inference(tokenizer, main_model, variation_list, path)
+    df_head_masking.to_csv(path+'/head_masking.csv')
+    
+    # df_token_masking = ## CODE
