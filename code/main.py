@@ -104,12 +104,12 @@ if __name__ == '__main__':
 
     # trained model:
     tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-    main_model = GPT2ForSequenceClassification.from_pretrained("/Users/neetidesai/Desktop/CS6120-NLP/code/model")
+    main_model = GPT2ForSequenceClassification.from_pretrained("./code/model")
     tokenizer.pad_token = tokenizer.eos_token
 
     # get variations
     variation_list = get_one_head_masked_models(main_model=main_model)
-    samples_folder = '/Users/neetidesai/Desktop/CS6120-NLP/code/samples'
+    samples_folder = './code/samples'
     sample_files = [f for f in os.listdir(f"{samples_folder}")]
 
     path = 'output_logs'
@@ -117,11 +117,16 @@ if __name__ == '__main__':
         os.mkdir(path)
                 
     for v_i, model in enumerate(variation_list):
-        message = ""
+        message = f"%%%%%%%%%%%%%%%%%%%%%%%%%%% VARIANT - {v_i} %%%%%%%%%%%%%%%%%%%%%%%%%%% \n\n"
+        with open(f"{path}/results.txt", 'a') as text_file:
+            text_file.write(message)
         print("\n---------------------------------\n")
         print(f"Processing variation #{v_i}")
         for sample_file in sample_files:
-
+            message = f"{sample_file} \n\n"
+            with open(f"{path}/results.txt", 'a') as text_file:
+                text_file.write(message)
+            
             print(f"Processing file: {sample_file}")
             df = pd.read_csv(os.path.join(samples_folder, sample_file))
 
@@ -129,21 +134,31 @@ if __name__ == '__main__':
             texts = df['text'].tolist()
 
             for text, label in zip(texts, labels):
+                message = f"{text}\n"
+                
+                with open(f"{path}/results.txt", 'a') as text_file:
+                    text_file.write(message)
                 inputs = tokenizer(text, return_tensors='pt')
                 
                 # Baseline result
                 with torch.no_grad():
                     logits = main_model(**inputs).logits
                 probs = sm(logits).tolist()
-                class_ = mapping[label]
-                message += f"Baseline probabilities for {sample_file} - {text}: {probs} \n\n"
+                class_ = mapping[int(label[-1])]
+
+                message = f"Baseline probabilities: {probs}\n"
+                with open(f"{path}/results.txt", 'a') as text_file:
+                    text_file.write(message)
                 
                 # Get the probabilities for one variation
                 diff_probs = pass_text_to_model(inputs, model)
-                message += f"Variation probabilities for variation #{v_i} - {text}: {diff_probs}\n"
-        message += "\n---------------------------------\n"
-        with open(f"{path}/results.txt", 'w') as text_file:
+                message = f"variant: {diff_probs}\n\n"
+                with open(f"{path}/results.txt", 'a') as text_file:
+                    text_file.write(message)
+        message = "\n---------------------------------\n"
+        with open(f"{path}/results.txt", 'a') as text_file:
             text_file.write(message)
+       
 
 
     '''
