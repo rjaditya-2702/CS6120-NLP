@@ -102,22 +102,16 @@ def head_masking(text, tokenizer, variation_list, ):
 
 if __name__ == '__main__':
 
-    ## trained model:
+    # trained model:
     tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
     main_model = GPT2ForSequenceClassification.from_pretrained("/Users/neetidesai/Desktop/CS6120-NLP/code/model")
     tokenizer.pad_token = tokenizer.eos_token
 
-    ## get variations
+    # get variations
     variation_list = get_one_head_masked_models(main_model=main_model)
     samples_folder = '/Users/neetidesai/Desktop/CS6120-NLP/code/samples'
     sample_files = [f for f in os.listdir(f"{samples_folder}")]
 
-    # exec_path_list = os.path.abspath(__file__).split('/')
-    # path = ''
-    # for i in exec_path_list:
-    #     if i == 'code':
-    #         break
-    #     path += i + '/'
     path = 'output_logs'
     if not os.path.exists(path):
         os.mkdir(path)
