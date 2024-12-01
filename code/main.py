@@ -4,12 +4,30 @@ import torch.nn as nn
 import numpy as np
 import pandas as pd
 
+from torch.utils.data import Dataset, DataLoader
 from transformers import pipeline
 from transformers import GPT2Tokenizer
 from transformers import GPT2ForSequenceClassification, GPT2Config
 import os
 
 sm = nn.Softmax()
+head_masked_probs = {
+     "joy": [],
+     "sadness": [],
+     "anger": [],
+     "fear": [],
+     "love": [],
+     "surprise": []
+ }
+
+mapping = {
+    0: "sadness",
+    1: "joy",
+    2: "love",
+    3: "anger",
+    4: "fear",
+    5: "surprise"
+}
 
 def apply_mask(model, head_name):
     """
@@ -34,15 +52,27 @@ def apply_mask(model, head_name):
     
     return model_copy
 
-def main(text, tokenizer, main_model):
-
+def get_one_head_masked_models(main_model):
+    ## mask one attention head at a time:
     variation_list = []
     n_heads = 12 # MHA
 
-    ## mask one attention head at a time:
     for i in range(n_heads):
         attention_head_name = f'transformer.h.{i}.attn.c_proj'
         variation_list.append(apply_mask(main_model, attention_head_name))
+    return variation_list
+
+class CustomDataset(Dataset):
+    def __init__(self, texts):
+        self.texts = texts
+
+    def __len__(self):
+        return len(self.texts)
+
+    def __getitem__(self, idx):
+        return self.texts[idx]
+
+def main(text, tokenizer, variation_list):
 
     ## collect prob vectors
     output_dict = {}
@@ -51,53 +81,90 @@ def main(text, tokenizer, main_model):
         with torch.no_grad():
             logits = model(**inputs).logits
         softmax_probs = sm(logits)
-        print(softmax_probs)
+        # print(softmax_probs)
         output_dict[i] = softmax_probs
     return output_dict
 
+def pass_text_to_model(inputs, model):
+
+    ## collect prob vectors
+    with torch.no_grad():
+        logits = model(**inputs).logits
+    softmax_probs = sm(logits)
+    # print(softmax_probs)
+    return softmax_probs
+
+def head_masking(text, tokenizer, variation_list, ):
+    inputs = tokenizer(text, return_tensors = 'pt')
+    for i, model in enumerate(variation_list):
+        probs = pass_text_to_model(inputs, model)
+    return probs
+
 if __name__ == '__main__':
 
-    ## trained model:
+    # trained model:
     tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-    model = GPT2ForSequenceClassification.from_pretrained("./model")
+    main_model = GPT2ForSequenceClassification.from_pretrained("/Users/neetidesai/Desktop/CS6120-NLP/code/model")
     tokenizer.pad_token = tokenizer.eos_token
 
-    # ## get examples per class:
+    # get variations
+    variation_list = get_one_head_masked_models(main_model=main_model)
+    samples_folder = '/Users/neetidesai/Desktop/CS6120-NLP/code/samples'
+    sample_files = [f for f in os.listdir(f"{samples_folder}")]
+
+    path = 'output_logs'
+    if not os.path.exists(path):
+        os.mkdir(path)
+                
+    for v_i, model in enumerate(variation_list):
+        message = ""
+        print("\n---------------------------------\n")
+        print(f"Processing variation #{v_i}")
+        for sample_file in sample_files:
+
+            print(f"Processing file: {sample_file}")
+            df = pd.read_csv(os.path.join(samples_folder, sample_file))
+
+            labels = df['label'].values.tolist()
+            texts = df['text'].tolist()
+
+            for text, label in zip(texts, labels):
+                inputs = tokenizer(text, return_tensors='pt')
+                
+                # Baseline result
+                with torch.no_grad():
+                    logits = main_model(**inputs).logits
+                probs = sm(logits).tolist()
+                class_ = mapping[label]
+                message += f"Baseline probabilities for {sample_file} - {text}: {probs} \n\n"
+                
+                # Get the probabilities for one variation
+                diff_probs = pass_text_to_model(inputs, model)
+                message += f"Variation probabilities for variation #{v_i} - {text}: {diff_probs}\n"
+        message += "\n---------------------------------\n"
+        with open(f"{path}/results.txt", 'w') as text_file:
+            text_file.write(message)
+
+
+    '''
+    ## get examples per class:
 
     # text = """
     # I am happy becuase of this movie. The joy i experience is insurmountable.
     # """
-    text = """Today is a good day. A lot of people minding their own business. None of them include checking on me though!"""
+    text = """i am very SAD"""
     
-    print(len(text))
     ## baseline result:
     inputs = tokenizer(text, return_tensors = 'pt')
     with torch.no_grad():
-        logits = model(**inputs).logits
+        logits = main_model(**inputs).logits
     probs = sm(logits).tolist()
     print(probs)
     print()
 
-    ## get the probabilities for each variation:
-    diff_probs = main(text, tokenizer, model)
-    print(diff_probs)
+    # print(variation_list)
 
-    # ## comparison:
-    samples_folder = 'samples'
-    sample_files = [f for f in os.listdir(samples_folder) if os.path.isfile(os.path.join(samples_folder, f))]
-
-    for sample_file in sample_files:
-        with open(os.path.join(samples_folder, sample_file), 'r') as file:
-            text = file.read()
-            print(f"Processing file: {sample_file}")
-            
-            # Baseline result
-            inputs = tokenizer(text, return_tensors='pt')
-            with torch.no_grad():
-                logits = model(**inputs).logits
-            probs = sm(logits).tolist()
-            print(f"Baseline probabilities for {sample_file}: {probs}")
-            
-            # Get the probabilities for each variation
-            diff_probs = main(text, tokenizer, model)
-            print(f"Variation probabilities for {sample_file}: {diff_probs}")
+    # ## get the probabilities for each variation:
+    # diff_probs = main(text, tokenizer, variation_list)
+    # print(diff_probs)
+    '''
