@@ -3,12 +3,34 @@ import torch
 import torch.nn as nn
 import numpy as np
 import pandas as pd
+import os
 
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 from transformers import pipeline
 from transformers import GPT2Tokenizer
-from transformers import GPT2ForSequenceClassification, GPT2Config
-import os
+from transformers import GPT2ForSequenceClassification
+
+from sklearn.model_selection import train_test_split
+from sklearn import metrics
+from datasets import Dataset
+
+from head_masking_analysis import head_masking_analysis
+
+if torch.cuda.is_available():
+    device = torch.device('cude')
+elif torch.backends.mps.is_available():
+    device = torch.device('mps')
+else:
+    device = torch.device('cpu')
+
+dataset_path = "./code/text.csv"
+df = pd.read_csv(dataset_path)
+df = df.drop("Unnamed: 0", axis=1)
+
+train_df, test_df = train_test_split(df, test_size=0.2, random_state=10, shuffle=False)
+
+train_dataset = Dataset.from_pandas(train_df)
+test_dataset = Dataset.from_pandas(test_df)
 
 sm = nn.Softmax()
 head_masked_probs = {
@@ -28,6 +50,17 @@ mapping = {
     4: "fear",
     5: "surprise"
 }
+
+def evaluate(model, tokenizer):
+    test_strings = [d["text"] for d in test_dataset]
+    
+    pipe = pipeline("text-classification", model = model, tokenizer = tokenizer, device=device)
+    test_pred = pipe(test_strings)
+    test_pred_class = [int(p["label"][-1]) for p in test_pred]
+    test_true_class = test_df['label'].tolist()
+    test_acc = metrics.accuracy_score(test_true_class, test_pred_class)
+    return test_acc
+
 
 def apply_mask(model, head_name):
     """
@@ -51,6 +84,14 @@ def apply_mask(model, head_name):
             param *= mask_bias
     
     return model_copy
+
+def get_multi_head_masked_models(main_model, mask_list):
+    final_model = copy.deepcopy(main_model)
+    n_heads = 12
+    for i in mask_list:
+        attention_head_name = f'transformer.h.{i}.attn.c_proj'
+        final_model = apply_mask(final_model, attention_head_name)
+    return final_model
 
 def get_one_head_masked_models(main_model):
     ## mask one attention head at a time:
@@ -107,15 +148,8 @@ def head_masking_inference(tokenizer, main_model, variation_list, path):
         os.mkdir(path)
                 
     for v_i, model in enumerate(variation_list):
-        message = f"%%%%%%%%%%%%%%%%%%%%%%%%%%% VARIANT - {v_i} %%%%%%%%%%%%%%%%%%%%%%%%%%% \n\n"
-        with open(f"{path}/results.txt", 'a') as text_file:
-            text_file.write(message)
-        print("\n---------------------------------\n")
-        print(f"Processing variation #{v_i}")
+
         for sample_file in sample_files:
-            # message = f"{sample_file} \n\n"
-            # with open(f"{path}/results.txt", 'a') as text_file:
-            #     text_file.write(message)
             
             print(f"Processing file: {sample_file}")
             df = pd.read_csv(os.path.join(samples_folder, sample_file))
@@ -124,9 +158,6 @@ def head_masking_inference(tokenizer, main_model, variation_list, path):
             texts = df['text'].tolist()
 
             for text, label in zip(texts, labels):
-                # message = f"{text}\n"
-                # with open(f"{path}/results.txt", 'a') as text_file:
-                #     text_file.write(message)
                 d['Text'].append(text)
                 d['True'].append(label)
                 inputs = tokenizer(text, return_tensors='pt')
@@ -143,13 +174,7 @@ def head_masking_inference(tokenizer, main_model, variation_list, path):
                 d['4'].append(probs[0])
                 d['5'].append(probs[0])
 
-                class_ = mapping[int(label[-1])]
-
-                # message = f"Baseline probabilities: {probs}\n"
-                # with open(f"{path}/results.txt", 'a') as text_file:
-                #     text_file.write(message)
                 
-                # Get the probabilities for one variation
                 diff_probs = pass_text_to_model(inputs, model).tolist()[0]
                 d['Text'].append(text)
                 d['True'].append(label)
@@ -160,12 +185,6 @@ def head_masking_inference(tokenizer, main_model, variation_list, path):
                 d['3'].append(diff_probs[0])
                 d['4'].append(diff_probs[0])
                 d['5'].append(diff_probs[0])
-                # message = f"variant: {diff_probs}\n\n"
-                # with open(f"{path}/results.txt", 'a') as text_file:
-                #     text_file.write(message)
-        # message = "\n---------------------------------\n"
-        # with open(f"{path}/results.txt", 'a') as text_file:
-        #     text_file.write(message)
     
     df = pd.DataFrame(d)
     return df
@@ -205,7 +224,30 @@ if __name__ == "__main__":
     
     path = 'output_logs'
 
-    df_head_masking = head_masking_inference(tokenizer, main_model, variation_list, path)
-    df_head_masking.to_csv(path+'/head_masking.csv')
+    if os.path.exists(path+'/results.txt'):
+        os.remove(path+'/results.txt')
+
+    # df_head_masking = head_masking_inference(tokenizer, main_model, variation_list, path)
+    # df_head_masking.to_csv(path+'/head_masking.csv')
+    head_masking_analysis(path+'/head_masking.csv', path+'/head_masking_class_prob_diff.npy')
+    read_dictionary = np.load(path+'/head_masking_class_prob_diff.npy',allow_pickle='TRUE').item()
+    with open(f"{path}/results.txt", 'a') as text_file:
+        text_file.write('Average correct label drop in probability from for each variant w.r.t baseline:\n')
+        text_file.write(str(read_dictionary))
+        text_file.write("\n\n")
+
+    # mask all heads except 0
+    mask_list = [i for i in range(1, 12)]
+    new_model = get_multi_head_masked_models(main_model, mask_list)
+    # accuracy = evaluate(new_model, tokenizer)
+    # print(f"After masking all heads except HEAD0, the accuracy of test dataset is = {accuracy}")
+    df_multi_head_masking = head_masking_inference(tokenizer, main_model, [new_model], path)
+    df_multi_head_masking.to_csv(path+'/multi_head_masking.csv')
+    head_masking_analysis(path+'/multi_head_masking.csv', path+'/multi_head_masking_class_prob_diff.npy')
+    read_dictionary = np.load(path+'/multi_head_masking_class_prob_diff.npy',allow_pickle='TRUE').item()
+    with open(f"{path}/results.txt", 'a') as text_file:
+        text_file.write("Average correct label drop in probability from for multi head masked w.r.t baseline:\n")
+        text_file.write(str(read_dictionary))
     
     # df_token_masking = ## CODE
+    
