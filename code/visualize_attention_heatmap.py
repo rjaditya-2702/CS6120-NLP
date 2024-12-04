@@ -1,10 +1,4 @@
-import pandas as pd
-import numpy as np
-from collections import defaultdict
 from nnsight import LanguageModel
-from transformers import GPT2Tokenizer
-from transformers import GPT2ForSequenceClassification, GPT2Config
-import torch
 import matplotlib.pyplot as plt
 
 def plot_head0_heatmap(sent1, sent2, model_folder_path):
