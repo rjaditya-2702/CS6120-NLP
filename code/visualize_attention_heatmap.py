@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 def plot_head0_heatmap(sent1, sent2, model_folder_path):
 
-    model = LanguageModel(model, device_map='auto')
+    model = LanguageModel(model_folder_path, device_map='auto')
 
     with model.trace(sent1) as tracer:
         h0 = model.transformer.h[0].output[0].save()
