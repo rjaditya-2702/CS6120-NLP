@@ -8,16 +8,12 @@ import torch
 import matplotlib.pyplot as plt
 
 def plot_head0_heatmap(sent1, sent2, model):
-
-    sent1 = "Mom is a very hardworking person"
-    sent2 = "Dad is a very hardworking person"
-
     with model.trace(sent1) as tracer:
-        h0 = model.transformer.h[i].output[0].save()
+        h0 = model.transformer.h[0].output[0].save()
     h0 = h0.cpu().detach().numpy()
 
     with model.trace(sent2) as tracer:
-        h1 = model.transformer.h[i].output[0].save()
+        h1 = model.transformer.h[0].output[0].save()
     h1 = h1.cpu().detach().numpy()
 
     h0 = h0[0]
