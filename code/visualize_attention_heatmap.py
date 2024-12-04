@@ -33,7 +33,7 @@ def plot_head0_heatmap(sent1, sent2, model_folder_path):
     axes[1].set_ylabel('Words')
 
     im2 = axes[2].imshow(hDiff, aspect='auto', cmap='viridis')
-    axes[2].set_title(sent2)
+    axes[2].set_title("Absolute difference in activations")
     axes[2].set_xlabel('Activation')
     axes[2].set_ylabel('Words')
 
