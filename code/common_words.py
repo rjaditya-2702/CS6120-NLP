@@ -1,11 +1,13 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType
-from pyspark.sql.functions import desc, row_number, split, col, explode, lit
+from pyspark.sql.functions import desc, row_number, split, col, explode, lit, collect_list, when, array_contains, expr
 from pyspark.ml.feature import StopWordsRemover
 from pyspark.sql.window import Window
 import os
 JAVA_HOME = '/opt/homebrew/opt/openjdk'
 SPARK_HOME = '/opt/homebrew/opt/apache-spark/libexec'
+os.environ["PYSPARK_PYTHON"] = "/Users/neetidesai/anaconda3/envs/nlp-hw2-venv/bin/python"
+os.environ["PYSPARK_DRIVER_PYTHON"] = "/Users/neetidesai/anaconda3/envs/nlp-hw2-venv/bin/python"
 
 CLASSES = {
     '0': 'sadness',
@@ -19,7 +21,7 @@ CLASSES = {
 # create a SparkSession
 spark = SparkSession.builder.appName("CSV to DataFrame").config("spark.driver.bindAddress", "127.0.0.1").getOrCreate()
 
-df = spark.read.format("csv").option("header", "true").load("code/text.csv")
+df = spark.read.format("csv").option("header", "true").load("code/test.csv")
 
 
 
@@ -33,7 +35,7 @@ def common_words(df):
     remover = StopWordsRemover(inputCol="split_text", outputCol="filtered_words")
 
     # add some stopwords
-    stop_words = ["im", "really", "ive", "feel", "feels", "feeling", "get", "got"]
+    stop_words = ["im", "really", "ive", "feel", "feels", "feeling", "get", "got", "like"]
     remover.setStopWords(remover.getStopWords() + stop_words)
 
     df = remover.transform(df)
@@ -71,7 +73,41 @@ def common_words(df):
 
         return_df = return_df.union(top_words)
 
+    return_df.show()
+
     return_df.coalesce(1).write.csv("code/common_words", header=True, mode="overwrite")
 
+
+def replace_common_words(df):
+    schema = StructType([
+        StructField("label", DoubleType(), True),
+        StructField("word", StringType(), True),
+        StructField("count", DoubleType(), True)
+    ])
+
+
+    # Read the common words csv
+    common_words = spark.read.format("csv").option("header", "true").schema(schema).load("code/common_words.csv")
+
+    # Convert to a dictionary
+    common_words_dict = common_words.groupBy("label").agg(collect_list("word")).rdd.collectAsMap()
+    common_words_dict = {str((int(k))): v for k, v in common_words_dict.items()}
+
+    # Split sentences into a list of words
+    df = df.withColumn("split_text", split("text", "\s+"))
+
+    # Replace the common words in the text
+    for label in CLASSES.keys():
+        for word in common_words_dict[label]:
+            df = df.withColumn("split_text", when((col("label") == label) & array_contains(col("split_text"), word), expr(f"transform(split_text, x -> CASE WHEN x = '{word}' THEN 'COMMON' ELSE x END)")).otherwise(col("split_text")))
+
+    df = df.withColumn("text", expr("concat_ws(' ', split_text)"))
+    df = df.drop("split_text")
+
+    df.coalesce(1).write.csv("code/replaced_words", header=True, mode="overwrite")
+
+    return df
+
+# new_df = replace_common_words(df)
 
 common_words(df)
