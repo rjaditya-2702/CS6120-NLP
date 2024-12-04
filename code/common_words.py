@@ -6,8 +6,6 @@ from pyspark.sql.window import Window
 import os
 JAVA_HOME = '/opt/homebrew/opt/openjdk'
 SPARK_HOME = '/opt/homebrew/opt/apache-spark/libexec'
-os.environ["PYSPARK_PYTHON"] = "/Users/neetidesai/anaconda3/envs/nlp-hw2-venv/bin/python"
-os.environ["PYSPARK_DRIVER_PYTHON"] = "/Users/neetidesai/anaconda3/envs/nlp-hw2-venv/bin/python"
 
 CLASSES = {
     '0': 'sadness',
