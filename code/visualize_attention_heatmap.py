@@ -7,7 +7,10 @@ from transformers import GPT2ForSequenceClassification, GPT2Config
 import torch
 import matplotlib.pyplot as plt
 
-def plot_head0_heatmap(sent1, sent2, model):
+def plot_head0_heatmap(sent1, sent2, model_folder_path):
+
+    model = LanguageModel(model, device_map='auto')
+
     with model.trace(sent1) as tracer:
         h0 = model.transformer.h[0].output[0].save()
     h0 = h0.cpu().detach().numpy()
