@@ -1,4 +1,5 @@
 from nnsight import LanguageModel
+import numpy as np
 
 import matplotlib.pyplot as plt
 
@@ -16,7 +17,7 @@ def plot_head0_heatmap(sent1, sent2, model_folder_path):
 
     h0 = h0[0]
     h1 = h1[0]
-    hDiff = h0 - h1
+    hDiff = np.abs(h0 - h1)
     vmin = min(h0.min(), h1.min())
     vmax = max(h0.max(), h1.max())
 
@@ -32,7 +33,7 @@ def plot_head0_heatmap(sent1, sent2, model_folder_path):
     axes[1].set_xlabel('Activation')
     axes[1].set_ylabel('Words')
 
-    im2 = axes[2].imshow(hDiff, aspect='auto', cmap='viridis')
+    im2 = axes[2].imshow(hDiff, aspect='auto', cmap='Greys')
     axes[2].set_title("Absolute difference in activations")
     axes[2].set_xlabel('Activation')
     axes[2].set_ylabel('Words')
