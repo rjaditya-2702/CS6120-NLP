@@ -18,6 +18,81 @@ CLASSES = {
     '5': 'surprise',
 }
 
+WORD_REPLACEMENTS = {
+    '0' : {
+        'know': 'understand',
+        'time': 'period',
+        'little': 'small',
+        'people': 'individuals',
+        'even': 'equal',
+        'still': 'nevertheless',
+        'want': 'desire',
+        'think': 'believe',
+        'bit': 'piece',
+        'life': 'existence',
+    },
+    '1' : {
+        'time': 'period',
+        'know': 'understand',
+        'people': 'individuals',
+        'one': 'single',
+        'want': 'desire',
+        'make': 'create',
+        'love': 'adore',
+        'much': 'lots',
+        'life': 'existence',
+        'think': 'believe',
+    },
+    '2' : {
+        'love': 'adore',
+        'know': 'understand',
+        'one': 'single',
+        'people': 'individuals',
+        'time': 'period',
+        'loved': 'adored',
+        'hot': 'boiling',
+        'sweet': 'pleasant',
+        'little': 'small',
+        'loving': 'adoring',
+    },
+    '3' : {
+        'know': 'understand',
+        'people': 'individual',
+        'time': 'period',
+        'little': 'small',
+        'want': 'desire',
+        'angry': 'mad',
+        'think': 'believe',
+        'one': 'single',
+        'even': 'equal',
+        'dont': 'avoid',
+    },
+    '4' : {
+        'know': 'understand',
+        'still': 'nevertheless',
+        'little': 'small',
+        'bit': 'piece',
+        'time': 'period',
+        'people': 'individuals',
+        'think': 'believe',
+        'scared': 'frightened',
+        'want': 'desire',
+        'afraid': 'fearful',
+    },
+    '5' : {
+        'shocked': 'astonished',
+        'strange': 'odd',
+        'overwhelmed': 'swamped',
+        'weird': 'uncanny',
+        'impressed': 'dazzled',
+        'amazed': 'astounded',
+        'surprised': 'startled',
+        'funny': 'hilarious',
+        'amazing': 'astounding',
+        'curious': 'interesting',
+    },
+}
+
 # create a SparkSession
 spark = SparkSession.builder.appName("CSV to DataFrame").config("spark.driver.bindAddress", "127.0.0.1").getOrCreate()
 
@@ -93,21 +168,24 @@ def replace_common_words(df):
     common_words_dict = common_words.groupBy("label").agg(collect_list("word")).rdd.collectAsMap()
     common_words_dict = {str((int(k))): v for k, v in common_words_dict.items()}
 
-    # Split sentences into a list of words
+    # Keep the original text column and create a new split_text column
     df = df.withColumn("split_text", split("text", "\s+"))
 
     # Replace the common words in the text
     for label in CLASSES.keys():
         for word in common_words_dict[label]:
-            df = df.withColumn("split_text", when((col("label") == label) & array_contains(col("split_text"), word), expr(f"transform(split_text, x -> CASE WHEN x = '{word}' THEN 'COMMON' ELSE x END)")).otherwise(col("split_text")))
+            new_word = WORD_REPLACEMENTS[label][word]
+            df = df.withColumn("split_text", when((col("label") == label) & array_contains(col("split_text"), word), expr(f"transform(split_text, x -> CASE WHEN x = '{word}' THEN '{new_word}' ELSE x END)")).otherwise(col("split_text")))
 
-    df = df.withColumn("text", expr("concat_ws(' ', split_text)"))
+    df = df.withColumn("replaced_text", expr("concat_ws(' ', split_text)"))
     df = df.drop("split_text")
+
+    df = df.select("text", "replaced_text", "label")
 
     df.coalesce(1).write.csv("code/replaced_words", header=True, mode="overwrite")
 
     return df
 
-# new_df = replace_common_words(df)
+new_df = replace_common_words(df)
 
-common_words(df)
+# common_words(df)
