@@ -1,14 +1,14 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType
-from pyspark.sql.functions import desc, row_number, split, col, explode, lit, collect_list, when, array_contains, expr
+from pyspark.sql.functions import desc, split, col, explode, lit, collect_list, when, array_contains, expr
 from pyspark.ml.feature import StopWordsRemover
-from pyspark.sql.window import Window
 import os
+
+# Set environment variables
 JAVA_HOME = '/opt/homebrew/opt/openjdk'
 SPARK_HOME = '/opt/homebrew/opt/apache-spark/libexec'
-os.environ["PYSPARK_PYTHON"] = "/Users/neetidesai/anaconda3/envs/nlp-hw2-venv/bin/python"
-os.environ["PYSPARK_DRIVER_PYTHON"] = "/Users/neetidesai/anaconda3/envs/nlp-hw2-venv/bin/python"
 
+# Constants
 CLASSES = {
     '0': 'sadness',
     '1': 'joy',
@@ -153,6 +153,7 @@ def common_words(df):
     return_df.coalesce(1).write.csv("code/common_words", header=True, mode="overwrite")
 
 
+# replace the ten most common words in each class with synonyms defined in WORD_REPLACEMENTS
 def replace_common_words(df):
     schema = StructType([
         StructField("label", DoubleType(), True),
@@ -187,5 +188,3 @@ def replace_common_words(df):
     return df
 
 new_df = replace_common_words(df)
-
-# common_words(df)
