@@ -33,23 +33,6 @@ train_dataset = Dataset.from_pandas(train_df)
 test_dataset = Dataset.from_pandas(test_df)
 
 sm = nn.Softmax()
-head_masked_probs = {
-     "joy": [],
-     "sadness": [],
-     "anger": [],
-     "fear": [],
-     "love": [],
-     "surprise": []
- }
-
-mapping = {
-    0: "sadness",
-    1: "joy",
-    2: "love",
-    3: "anger",
-    4: "fear",
-    5: "surprise"
-}
 
 def evaluate(model, tokenizer):
     """
@@ -151,13 +134,14 @@ def pass_text_to_model(inputs, model):
     # print(softmax_probs)
     return softmax_probs
 
-def head_masking(text, tokenizer, variation_list, ):
-    inputs = tokenizer(text, return_tensors = 'pt')
-    for i, model in enumerate(variation_list):
-        probs = pass_text_to_model(inputs, model)
-    return probs
-
 def head_masking_inference(tokenizer, main_model, variation_list, path):
+    """
+    For every test example, fetch the baseline pronbability distribution and the variant models' probability distribution.
+    :param: tokenizer - converts the text into embeddings
+    :param: main_model - baseline model
+    :param: variation_list - list of variant models
+    :return: a pandas dataframe of consolidated results 
+    """
 
     d = {
         "Text": [],
@@ -219,31 +203,9 @@ def head_masking_inference(tokenizer, main_model, variation_list, path):
     return df
 
 
-    '''
-    ## get examples per class:
-
-    # text = """
-    # I am happy becuase of this movie. The joy i experience is insurmountable.
-    # """
-    text = """i am very SAD"""
-    
-    ## baseline result:
-    inputs = tokenizer(text, return_tensors = 'pt')
-    with torch.no_grad():
-        logits = main_model(**inputs).logits
-    probs = sm(logits).tolist()
-    print(probs)
-    print()
-
-    # print(variation_list)
-
-    # ## get the probabilities for each variation:
-    # diff_probs = main(text, tokenizer, variation_list)
-    # print(diff_probs)
-    '''
-
 if __name__ == "__main__":
-    # trained model:
+
+    # load the trained model:
     tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
     main_model = GPT2ForSequenceClassification.from_pretrained("./code/model")
     tokenizer.pad_token = tokenizer.eos_token
@@ -251,6 +213,7 @@ if __name__ == "__main__":
     # get variations
     variation_list = get_one_head_masked_models(main_model=main_model)
     
+    # create a folder to save files.
     path = 'output_logs'
 
     if os.path.exists(path+'/results.txt'):
@@ -258,6 +221,8 @@ if __name__ == "__main__":
 
     # df_head_masking = head_masking_inference(tokenizer, main_model, variation_list, path)
     # df_head_masking.to_csv(path+'/head_masking.csv')
+
+    # Analyse each variant's performance.
     head_masking_analysis(path+'/head_masking.csv', path+'/head_masking_class_prob_diff.npy')
     read_dictionary = np.load(path+'/head_masking_class_prob_diff.npy',allow_pickle='TRUE').item()
     with open(f"{path}/results.txt", 'a') as text_file:
@@ -265,11 +230,9 @@ if __name__ == "__main__":
         text_file.write(str(read_dictionary))
         text_file.write("\n\n")
 
-    # mask all heads except 0
+    # mask all heads except 0.
     mask_list = [i for i in range(1, 12)]
     new_model = get_multi_head_masked_models(main_model, mask_list)
-    # accuracy = evaluate(new_model, tokenizer)
-    # print(f"After masking all heads except HEAD0, the accuracy of test dataset is = {accuracy}")
     df_multi_head_masking = head_masking_inference(tokenizer, main_model, [new_model], path)
     df_multi_head_masking.to_csv(path+'/multi_head_masking.csv')
     head_masking_analysis(path+'/multi_head_masking.csv', path+'/multi_head_masking_class_prob_diff.npy')
@@ -277,6 +240,4 @@ if __name__ == "__main__":
     with open(f"{path}/results.txt", 'a') as text_file:
         text_file.write("Average correct label drop in probability from for multi head masked w.r.t baseline:\n")
         text_file.write(str(read_dictionary))
-    
-    # df_token_masking = ## CODE
     
