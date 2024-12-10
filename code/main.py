@@ -52,6 +52,14 @@ mapping = {
 }
 
 def evaluate(model, tokenizer):
+    """
+    This function evaluates the model on test dataset (already loaded). 
+
+    :param: model - a transformer model suited for sentiment classification.
+    :param: tokenizer - tokenizer of the model that returns the word embeddings of each word/token in the document  
+    :return: Accuracy score.
+    """
+
     test_strings = [d["text"] for d in test_dataset]
     
     pipe = pipeline("text-classification", model = model, tokenizer = tokenizer, device=device)
@@ -64,8 +72,11 @@ def evaluate(model, tokenizer):
 
 def apply_mask(model, head_name):
     """
+    Applys a mask by multiplying the parameters of a head with 0.
+
     :param: model - the trained model
     :param: the attention matrix of the head to be masked. e.g. 'transformer.h.2.attn.c_proj'
+    :return: a copy of the model passed with the mask applied.
     """
 
     weight_name = head_name + '.weights'
@@ -86,6 +97,14 @@ def apply_mask(model, head_name):
     return model_copy
 
 def get_multi_head_masked_models(main_model, mask_list):
+    """
+    Given a list of specific heads to mask, this function calls apply_mask() to apply and get a new variant.
+    
+    :param: main_model - transformer model suited for sentiment classification (usually a baseline).
+    :param: mask_list - a list of heads to mask.
+    :return: one modified model where all the heads mentioned in mask_list are masked.
+    """
+
     final_model = copy.deepcopy(main_model)
     n_heads = 12
     for i in mask_list:
@@ -94,6 +113,12 @@ def get_multi_head_masked_models(main_model, mask_list):
     return final_model
 
 def get_one_head_masked_models(main_model):
+    """
+    Given a main_model, this function calls apply_mask() to apply and get a new variant.
+    
+    :param: main_model - transformer model suited for sentiment classification (usually a baseline).
+    :return: a list of variant models. each element in the list is a model with one head masked.
+    """
     ## mask one attention head at a time:
     variation_list = []
     n_heads = 12 # MHA
@@ -114,6 +139,10 @@ class CustomDataset(Dataset):
         return self.texts[idx]
 
 def pass_text_to_model(inputs, model):
+    """
+    This function takes in the tokenized inputs and 
+    the model to return the probability distribution of each class
+    """
 
     ## collect prob vectors
     with torch.no_grad():
