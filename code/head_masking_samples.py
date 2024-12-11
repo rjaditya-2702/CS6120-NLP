@@ -31,7 +31,7 @@ def get_samples():
     ])
 
     # convert from csv to pyspark dataframe
-    df = spark.read.format("csv").option("header", "true").schema(schema).load("code/test_inference.csv")
+    df = spark.read.format("csv").option("header", "true").schema(schema).load("code/data/test_inference.csv")
 
     # Partition by class and sort by score (descending)
     window = Window.partitionBy("label").orderBy(desc("score"))
@@ -52,3 +52,5 @@ def get_samples():
     for label, class_name in CLASSES.items():
         sample = df.filter(df["label"] == str(label))
         sample.write.csv(f"code/samples/{class_name}", header=True, mode="overwrite")
+
+get_samples()

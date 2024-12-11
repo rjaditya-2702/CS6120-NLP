@@ -96,7 +96,7 @@ WORD_REPLACEMENTS = {
 # create a SparkSession
 spark = SparkSession.builder.appName("CSV to DataFrame").config("spark.driver.bindAddress", "127.0.0.1").getOrCreate()
 
-df = spark.read.format("csv").option("header", "true").load("code/test.csv")
+df = spark.read.format("csv").option("header", "true").load("code/data/test.csv")
 
 
 
@@ -148,8 +148,6 @@ def common_words(df):
 
         return_df = return_df.union(top_words)
 
-    return_df.show()
-
     return_df.coalesce(1).write.csv("code/common_words", header=True, mode="overwrite")
 
 
@@ -163,7 +161,7 @@ def replace_common_words(df):
 
 
     # Read the common words csv
-    common_words = spark.read.format("csv").option("header", "true").schema(schema).load("code/common_words.csv")
+    common_words = spark.read.format("csv").option("header", "true").schema(schema).load("code/data/common_words.csv")
 
     # Convert to a dictionary
     common_words_dict = common_words.groupBy("label").agg(collect_list("word")).rdd.collectAsMap()
@@ -187,4 +185,5 @@ def replace_common_words(df):
 
     return df
 
+common_words(df)
 new_df = replace_common_words(df)
