@@ -2,7 +2,6 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType
 from pyspark.sql.functions import desc, split, col, explode, lit, collect_list, when, array_contains, expr
 from pyspark.ml.feature import StopWordsRemover
-import os
 
 # Set environment variables
 JAVA_HOME = '/opt/homebrew/opt/openjdk'
