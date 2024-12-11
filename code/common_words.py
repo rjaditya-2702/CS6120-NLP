@@ -57,7 +57,7 @@ WORD_REPLACEMENTS = {
     },
     '3' : {
         'know': 'understand',
-        'people': 'individual',
+        'people': 'individuals',
         'time': 'period',
         'little': 'small',
         'want': 'desire',
