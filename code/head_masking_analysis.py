@@ -17,7 +17,7 @@ def head_masking_analysis(filename, output_path):
 }
     sentence_orig_prob = {}
 
-    for index, row in head_masked_probs.iterrows():
+    for _, row in head_masked_probs.iterrows():
         idx = row["True"][-1]
         if row["mask"] == -1:
             sentence_orig_prob[row["Text"]] = row[idx]
