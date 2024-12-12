@@ -218,7 +218,7 @@ if __name__ == "__main__":
     # df_head_masking = head_masking_inference(tokenizer, main_model, variation_list, path)
     # df_head_masking.to_csv(path+'/head_masking.csv')
 
-    # Analyse each variant's performance.
+    # Analyse each variant's performance. The output is saved as a npy file in the current execution directory.
     head_masking_analysis(path+'/head_masking.csv', path+'/head_masking_class_prob_diff.npy')
     read_dictionary = np.load(path+'/head_masking_class_prob_diff.npy',allow_pickle='TRUE').item()
     with open(f"{path}/results.txt", 'a') as text_file:
@@ -226,7 +226,7 @@ if __name__ == "__main__":
         text_file.write(str(read_dictionary))
         text_file.write("\n\n")
 
-    # mask all heads except 0.
+    # mask all heads except 0. Analyse the new variant's performance. The output is saved as a npy file in the current execution directory.
     mask_list = [i for i in range(1, 12)]
     new_model = get_multi_head_masked_models(main_model, mask_list)
     df_multi_head_masking = head_masking_inference(tokenizer, main_model, [new_model], path)
