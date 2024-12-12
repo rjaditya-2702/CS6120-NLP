@@ -23,14 +23,11 @@ elif torch.backends.mps.is_available():
 else:
     device = torch.device('cpu')
 
-dataset_path = "./code/text.csv"
+dataset_path = "./code/test.csv"
 df = pd.read_csv(dataset_path)
 df = df.drop("Unnamed: 0", axis=1)
 
-train_df, test_df = train_test_split(df, test_size=0.2, random_state=10, shuffle=False)
-
-train_dataset = Dataset.from_pandas(train_df)
-test_dataset = Dataset.from_pandas(test_df)
+test_dataset = Dataset.from_pandas(df)
 
 sm = nn.Softmax()
 
@@ -48,7 +45,7 @@ def evaluate(model, tokenizer):
     pipe = pipeline("text-classification", model = model, tokenizer = tokenizer, device=device)
     test_pred = pipe(test_strings)
     test_pred_class = [int(p["label"][-1]) for p in test_pred]
-    test_true_class = test_df['label'].tolist()
+    test_true_class = df['label'].tolist()
     test_acc = metrics.accuracy_score(test_true_class, test_pred_class)
     return test_acc
 
@@ -89,7 +86,6 @@ def get_multi_head_masked_models(main_model, mask_list):
     """
 
     final_model = copy.deepcopy(main_model)
-    n_heads = 12
     for i in mask_list:
         attention_head_name = f'transformer.h.{i}.attn.c_proj'
         final_model = apply_mask(final_model, attention_head_name)
