@@ -19,6 +19,7 @@ The models are available here - https://drive.google.com/drive/folders/1D7eiUCLU
 There are two folders - 
 1. `model/` - used for all predictions, run tests, etc.
 2. `model_with_tokenizer/` - used primarily in token_analysis
+
 Ensure the two models are inside `code/`
 
 ### To run the head masking experiment:
@@ -27,6 +28,10 @@ Ensure the two models are inside `code/`
 2. Run head_masking.py to process the sentences obtained from step1 on each variant. The results are stored as npy files in the execution directory under the names `head_masking_class_prob_diff.npy` and `multi_head_masking_class_prob_diff.py`
 
 ### To run the word flipping experiment:
+
+1.  Connect to a python/ ipynb kernel that has the libraries mentioned in the requirements.
+2. Run the first five cells.
+3. The remaininder of the notebook compares the heatmaps of two sentences. Feel free to experiment by giving custom sentences.
 
 ### To run the word replacement experiment:
 
