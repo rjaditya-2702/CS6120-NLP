@@ -32,8 +32,8 @@ Ensure the two models are inside `code/`
 
 ### To run the word flipping experiment:
 
-1.  Connect to a python/ ipynb kernel that has the libraries mentioned in the requirements.
-2. Run the first five cells.
+1. Connect to a python/ ipynb kernel that has the libraries mentioned in the requirements.
+2. Run the first five cells of code/token_analysis.ipynb.
 3. The remaininder of the notebook compares the heatmaps of two sentences. Feel free to experiment by giving custom sentences.
 
 ### To run the word replacement experiment:
