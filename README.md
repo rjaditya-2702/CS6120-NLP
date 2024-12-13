@@ -33,13 +33,13 @@ Ensure the two models are inside `code/`
 ### To run the word flipping experiment:
 
 1. Connect to a python/ ipynb kernel that has the libraries mentioned in the requirements.
-2. Run the first five cells of code/token_analysis.ipynb.
+2. Run the first five cells of `code/token_analysis.ipynb`
 3. The remaininder of the notebook compares the heatmaps of two sentences. Feel free to experiment by giving custom sentences.
 
 ### To run the word replacement experiment:
 
 1. Run `common_words.py` to obtain the 10 most common words per class and replace them with synonyms (the results from this are stored in data/replaced_words_text.csv if you do not want to install PySpark and run the file.)
-2.
+2. 
 
 ## Nonstandard dependencies:
 
