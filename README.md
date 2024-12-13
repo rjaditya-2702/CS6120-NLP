@@ -12,6 +12,9 @@
    - Pandas
    - matplotlib
    - seaborn
+  
+### Data:
+Twitter Emotion Dataset: https://www.kaggle.com/datasets/adhamelkomy/twitter-emotion-dataset/data
 
 ### To get the model:
 The models are available here - https://drive.google.com/drive/folders/1D7eiUCLUJFTEy0FTlyFbQirYR2dbRhTw?usp=drive_link .
