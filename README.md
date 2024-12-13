@@ -39,7 +39,7 @@ Ensure the two models are inside `code/`
 ### To run the word replacement experiment:
 
 1. Run `common_words.py` to obtain the 10 most common words per class and replace them with synonyms (the results from this are stored in data/replaced_words_text.csv if you do not want to install PySpark and run the file.)
-2. Run the first five cells of `code/synonym_analysis.ipynb` to get the probability of the original and synonym-replaced sentences.
+2. Run the cells of `code/synonym_analysis.ipynb` to get the probability of the original and synonym-replaced sentences.
 
 ## Nonstandard dependencies:
 
