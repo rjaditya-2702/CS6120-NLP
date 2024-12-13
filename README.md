@@ -7,19 +7,22 @@
    - Sklearn
    - transformers
    - evaluate
-   - nnsight   
+   - nnsight
    - PySpark
    - Pandas
    - matplotlib
    - seaborn
-  
+
 ### Data:
+
 Twitter Emotion Dataset: https://www.kaggle.com/datasets/adhamelkomy/twitter-emotion-dataset/data
 
 ### To get the model:
+
 The models are available here - https://drive.google.com/drive/folders/1D7eiUCLUJFTEy0FTlyFbQirYR2dbRhTw?usp=drive_link .
 
-There are two folders - 
+There are two folders -
+
 1. `model/` - used for all predictions, run tests, etc.
 2. `model_with_tokenizer/` - used primarily in token_analysis
 
@@ -34,7 +37,7 @@ Ensure the two models are inside `code/`
 
 1. Connect to a python/ ipynb kernel that has the libraries mentioned in the requirements.
 2. Run the first five cells of `code/token_analysis.ipynb`
-3. The remaininder of the notebook compares the heatmaps of two sentences. Feel free to experiment by giving custom sentences.
+3. The remainder of the notebook compares the heatmaps of two sentences. Feel free to experiment by giving custom sentences.
 
 ### To run the word replacement experiment:
 
